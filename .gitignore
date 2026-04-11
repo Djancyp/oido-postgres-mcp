@@ -1,0 +1,20 @@
+# Build artifacts
+*-mcp
+*-mcp.exe
+*.exe
+*.so
+*.dylib
+*.zip
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+
+# Env
+.env
