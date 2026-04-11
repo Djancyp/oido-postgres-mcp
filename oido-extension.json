@@ -1,0 +1,52 @@
+{
+  "name": "oido-postgres",
+  "version": "1.0.0",
+  "description": "Execute SQL queries, list tables, and describe PostgreSQL database schemas via MCP server.",
+  "mcpServers": {
+    "oido-postgres": {
+      "command": "${extensionPath}/oido-postgres-mcp",
+      "args": [],
+      "env": {
+        "POSTGRES_HOST": "${POSTGRES_HOST}",
+        "POSTGRES_PORT": "${POSTGRES_PORT}",
+        "POSTGRES_DATABASE": "${POSTGRES_DATABASE}",
+        "POSTGRES_USER": "${POSTGRES_USER}",
+        "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}"
+      }
+    }
+  },
+  "contextFileName": "OIDO.md",
+  "excludeTools": [],
+  "settings": [
+    {
+      "name": "POSTGRES_HOST",
+      "description": "PostgreSQL host",
+      "defaultValue": "localhost",
+      "type": "string"
+    },
+    {
+      "name": "POSTGRES_PORT",
+      "description": "PostgreSQL port",
+      "defaultValue": "5432",
+      "type": "string"
+    },
+    {
+      "name": "POSTGRES_DATABASE",
+      "description": "PostgreSQL database",
+      "defaultValue": "postgres",
+      "type": "string"
+    },
+    {
+      "name": "POSTGRES_USER",
+      "description": "PostgreSQL user",
+      "defaultValue": "postgres",
+      "type": "string"
+    },
+    {
+      "name": "POSTGRES_PASSWORD",
+      "description": "PostgreSQL password",
+      "defaultValue": "",
+      "type": "string"
+    }
+  ]
+}
