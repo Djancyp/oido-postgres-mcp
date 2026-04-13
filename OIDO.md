@@ -73,7 +73,17 @@ Total rows: 10
 
 ## Notes
 
-- Only SELECT queries are allowed for safety (DROP/DELETE/TRUNCATE blocked)
-- Default row limit is 100 for SELECT queries
+- **Configurable SQL permissions**: Each SQL operation type (SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, TRUNCATE) can be individually enabled/disabled via environment variables
+- **Default read-only**: Only SELECT queries enabled by default
+- **Environment variables for permissions**:
+  - `POSTGRES_ALLOW_SELECT` (default: true)
+  - `POSTGRES_ALLOW_INSERT` (default: false)
+  - `POSTGRES_ALLOW_UPDATE` (default: false)
+  - `POSTGRES_ALLOW_DELETE` (default: false)
+  - `POSTGRES_ALLOW_CREATE` (default: false)
+  - `POSTGRES_ALLOW_ALTER` (default: false)
+  - `POSTGRES_ALLOW_DROP` (default: false)
+  - `POSTGRES_ALLOW_TRUNCATE` (default: false)
+- **Row limits**: Default 100 rows for SELECT queries
+- **Connection pooling**: 10 max open, 5 idle, 5 min lifetime
 - Uses environment variables for connection: POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DATABASE, POSTGRES_USER, POSTGRES_PASSWORD
-- Connection pooling: 10 max open, 5 idle, 5 min lifetime

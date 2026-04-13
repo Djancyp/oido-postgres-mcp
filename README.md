@@ -32,6 +32,49 @@ Set these before starting Oido Studio:
 | `POSTGRES_USER` | Yes | Database username |
 | `POSTGRES_PASSWORD` | No | Database password |
 
+## SQL Function Permissions
+
+Control which SQL operations are allowed via environment variables. By default, only SELECT is enabled for safety.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_ALLOW_SELECT` | `true` | Allow SELECT queries |
+| `POSTGRES_ALLOW_INSERT` | `false` | Allow INSERT statements |
+| `POSTGRES_ALLOW_UPDATE` | `false` | Allow UPDATE statements |
+| `POSTGRES_ALLOW_DELETE` | `false` | Allow DELETE statements |
+| `POSTGRES_ALLOW_CREATE` | `false` | Allow CREATE statements (tables, indexes, etc.) |
+| `POSTGRES_ALLOW_ALTER` | `false` | Allow ALTER statements (modify tables, etc.) |
+| `POSTGRES_ALLOW_DROP` | `false` | Allow DROP statements (delete tables, etc.) |
+| `POSTGRES_ALLOW_TRUNCATE` | `false` | Allow TRUNCATE statements |
+
+### Examples
+
+**Enable read-write access:**
+```bash
+export POSTGRES_ALLOW_SELECT=true
+export POSTGRES_ALLOW_INSERT=true
+export POSTGRES_ALLOW_UPDATE=true
+export POSTGRES_ALLOW_DELETE=true
+```
+
+**Enable full database access (including DDL):**
+```bash
+export POSTGRES_ALLOW_SELECT=true
+export POSTGRES_ALLOW_INSERT=true
+export POSTGRES_ALLOW_UPDATE=true
+export POSTGRES_ALLOW_DELETE=true
+export POSTGRES_ALLOW_CREATE=true
+export POSTGRES_ALLOW_ALTER=true
+export POSTGRES_ALLOW_DROP=true
+export POSTGRES_ALLOW_TRUNCATE=true
+```
+
+**Read-only mode (default):**
+```bash
+# Only SELECT enabled (default behavior)
+export POSTGRES_ALLOW_SELECT=true
+```
+
 ## Testing
 
 Start Oido Studio, then in chat:
@@ -72,8 +115,8 @@ oido-postgres/
 
 ## Safety
 
-- **Destructive operations blocked**: DROP, DELETE, TRUNCATE, ALTER, CREATE, UPDATE, INSERT
-- **SELECT queries only**: Ensures read-only access
+- **Configurable SQL permissions**: Each SQL operation type (SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, TRUNCATE) can be individually enabled/disabled via environment variables
+- **Default read-only**: Only SELECT queries enabled by default
 - **Row limits**: Default 100 rows for SELECT queries
 - **Connection pooling**: 10 max open, 5 idle connections
 

@@ -5,16 +5,92 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
 )
 
+// SQLFunctionSettings holds configuration for which SQL operations are allowed.
+type SQLFunctionSettings struct {
+	AllowSelect   bool
+	AllowInsert   bool
+	AllowUpdate   bool
+	AllowDelete   bool
+	AllowCreate   bool
+	AllowAlter    bool
+	AllowDrop     bool
+	AllowTruncate bool
+}
+
+// DefaultSQLFunctionSettings returns settings with only SELECT enabled by default.
+func DefaultSQLFunctionSettings() *SQLFunctionSettings {
+	return &SQLFunctionSettings{
+		AllowSelect:   true,
+		AllowInsert:   false,
+		AllowUpdate:   false,
+		AllowDelete:   false,
+		AllowCreate:   false,
+		AllowAlter:    false,
+		AllowDrop:     false,
+		AllowTruncate: false,
+	}
+}
+
+// parseSQLFunctionSettings reads environment variables to configure SQL function permissions.
+func parseSQLFunctionSettings() *SQLFunctionSettings {
+	settings := DefaultSQLFunctionSettings()
+
+	if val := os.Getenv("POSTGRES_ALLOW_SELECT"); val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			settings.AllowSelect = b
+		}
+	}
+	if val := os.Getenv("POSTGRES_ALLOW_INSERT"); val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			settings.AllowInsert = b
+		}
+	}
+	if val := os.Getenv("POSTGRES_ALLOW_UPDATE"); val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			settings.AllowUpdate = b
+		}
+	}
+	if val := os.Getenv("POSTGRES_ALLOW_DELETE"); val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			settings.AllowDelete = b
+		}
+	}
+	if val := os.Getenv("POSTGRES_ALLOW_CREATE"); val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			settings.AllowCreate = b
+		}
+	}
+	if val := os.Getenv("POSTGRES_ALLOW_ALTER"); val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			settings.AllowAlter = b
+		}
+	}
+	if val := os.Getenv("POSTGRES_ALLOW_DROP"); val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			settings.AllowDrop = b
+		}
+	}
+	if val := os.Getenv("POSTGRES_ALLOW_TRUNCATE"); val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			settings.AllowTruncate = b
+		}
+	}
+
+	return settings
+}
+
 // PostgresClient manages PostgreSQL database connections and queries.
 type PostgresClient struct {
-	connStr string
-	db      *sql.DB
+	connStr  string
+	db       *sql.DB
+	settings *SQLFunctionSettings
 }
 
 // NewPostgresClient creates a new PostgreSQL client from environment variables.
@@ -49,7 +125,9 @@ func NewPostgresClient() (*PostgresClient, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	return &PostgresClient{connStr: connStr, db: db}, nil
+	settings := parseSQLFunctionSettings()
+
+	return &PostgresClient{connStr: connStr, db: db, settings: settings}, nil
 }
 
 // Close closes the database connection.
@@ -62,17 +140,37 @@ func (c *PostgresClient) Close() error {
 
 // ExecuteSQL executes a raw SQL query and returns results as a formatted string.
 func (c *PostgresClient) ExecuteSQL(ctx context.Context, query string, limit int) (string, error) {
-	// Safety: block destructive operations
+	// Check permissions based on settings
 	upperQuery := strings.ToUpper(strings.TrimSpace(query))
-	destructive := []string{"DROP ", "DELETE ", "TRUNCATE ", "ALTER ", "CREATE ", "UPDATE ", "INSERT "}
-	for _, d := range destructive {
-		if strings.HasPrefix(upperQuery, d) {
-			return "", fmt.Errorf("blocked: %s operations are not allowed for safety", strings.TrimSpace(d))
+
+	type sqlOperation struct {
+		prefix  string
+		allowed bool
+	}
+
+	operations := []sqlOperation{
+		{"SELECT", c.settings.AllowSelect},
+		{"INSERT", c.settings.AllowInsert},
+		{"UPDATE", c.settings.AllowUpdate},
+		{"DELETE", c.settings.AllowDelete},
+		{"CREATE", c.settings.AllowCreate},
+		{"ALTER", c.settings.AllowAlter},
+		{"DROP", c.settings.AllowDrop},
+		{"TRUNCATE", c.settings.AllowTruncate},
+	}
+
+	for _, op := range operations {
+		if strings.HasPrefix(upperQuery, op.prefix) {
+			if !op.allowed {
+				return "", fmt.Errorf("blocked: %s operations are not allowed (enable with POSTGRES_ALLOW_%s=true)",
+					strings.TrimSpace(op.prefix), strings.TrimSpace(op.prefix))
+			}
+			break
 		}
 	}
 
 	// Append LIMIT if SELECT and not already present
-	if strings.HasPrefix(upperQuery, "SELECT") && !strings.Contains(upperQuery, "LIMIT") {
+	if strings.HasPrefix(upperQuery, "SELECT") && c.settings.AllowSelect && !strings.Contains(upperQuery, "LIMIT") {
 		if limit <= 0 {
 			limit = 100
 		}
