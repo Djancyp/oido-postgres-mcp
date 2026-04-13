@@ -1,6 +1,4 @@
 # Build artifacts
-*-mcp
-*-mcp.exe
 *.exe
 *.so
 *.dylib

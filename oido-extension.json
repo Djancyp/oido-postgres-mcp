@@ -11,7 +11,15 @@
         "POSTGRES_PORT": "${POSTGRES_PORT}",
         "POSTGRES_DATABASE": "${POSTGRES_DATABASE}",
         "POSTGRES_USER": "${POSTGRES_USER}",
-        "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}"
+        "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}",
+        "POSTGRES_ALLOW_SELECT": "${POSTGRES_ALLOW_SELECT}",
+        "POSTGRES_ALLOW_INSERT": "${POSTGRES_ALLOW_INSERT}",
+        "POSTGRES_ALLOW_UPDATE": "${POSTGRES_ALLOW_UPDATE}",
+        "POSTGRES_ALLOW_DELETE": "${POSTGRES_ALLOW_DELETE}",
+        "POSTGRES_ALLOW_CREATE": "${POSTGRES_ALLOW_CREATE}",
+        "POSTGRES_ALLOW_ALTER": "${POSTGRES_ALLOW_ALTER}",
+        "POSTGRES_ALLOW_DROP": "${POSTGRES_ALLOW_DROP}",
+        "POSTGRES_ALLOW_TRUNCATE": "${POSTGRES_ALLOW_TRUNCATE}"
       }
     }
   },
@@ -47,6 +55,54 @@
       "description": "PostgreSQL password",
       "defaultValue": "",
       "type": "string"
+    },
+    {
+      "name": "POSTGRES_ALLOW_SELECT",
+      "description": "Allow SELECT queries",
+      "defaultValue": "true",
+      "type": "bool"
+    },
+    {
+      "name": "POSTGRES_ALLOW_INSERT",
+      "description": "Allow INSERT statements",
+      "defaultValue": "false",
+      "type": "bool"
+    },
+    {
+      "name": "POSTGRES_ALLOW_UPDATE",
+      "description": "Allow UPDATE statements",
+      "defaultValue": "false",
+      "type": "bool"
+    },
+    {
+      "name": "POSTGRES_ALLOW_DELETE",
+      "description": "Allow DELETE statements",
+      "defaultValue": "false",
+      "type": "bool"
+    },
+    {
+      "name": "POSTGRES_ALLOW_CREATE",
+      "description": "Allow CREATE statements",
+      "defaultValue": "false",
+      "type": "bool"
+    },
+    {
+      "name": "POSTGRES_ALLOW_ALTER",
+      "description": "Allow ALTER statements",
+      "defaultValue": "false",
+      "type": "bool"
+    },
+    {
+      "name": "POSTGRES_ALLOW_DROP",
+      "description": "Allow DROP statements",
+      "defaultValue": "false",
+      "type": "bool"
+    },
+    {
+      "name": "POSTGRES_ALLOW_TRUNCATE",
+      "description": "Allow TRUNCATE statements",
+      "defaultValue": "false",
+      "type": "bool"
     }
   ]
 }
