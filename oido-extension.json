@@ -2,7 +2,7 @@
   "name": "oido-postgres",
   "version": "1.0.0",
   "description": "Execute SQL queries, list tables, and describe PostgreSQL database schemas via MCP server.",
-  "mcpServers": {
+  "mcpSerers": {
     "oido-postgres": {
       "command": "${extensionPath}/oido-postgres-mcp",
       "args": [],

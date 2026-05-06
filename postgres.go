@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -94,6 +95,7 @@ type PostgresClient struct {
 }
 
 // NewPostgresClient creates a new PostgreSQL client from environment variables.
+// If config is missing, returns client without connection — tools return errors until configured.
 func NewPostgresClient() (*PostgresClient, error) {
 	host := os.Getenv("POSTGRES_HOST")
 	port := os.Getenv("POSTGRES_PORT")
@@ -101,8 +103,11 @@ func NewPostgresClient() (*PostgresClient, error) {
 	user := os.Getenv("POSTGRES_USER")
 	password := os.Getenv("POSTGRES_PASSWORD")
 
+	settings := parseSQLFunctionSettings()
+
 	if host == "" || port == "" || database == "" || user == "" {
-		return nil, fmt.Errorf("missing required env vars: POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DATABASE, POSTGRES_USER")
+		log.Println("Warning: POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DATABASE, or POSTGRES_USER not set. Tools will return errors until configured.")
+		return &PostgresClient{settings: settings}, nil
 	}
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable",
@@ -112,22 +117,30 @@ func NewPostgresClient() (*PostgresClient, error) {
 		connStr += fmt.Sprintf(" password=%s", password)
 	}
 
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
+	return &PostgresClient{connStr: connStr, settings: settings}, nil
+}
 
+// ensureConnected opens the DB connection on first use. Safe to call multiple times.
+func (c *PostgresClient) ensureConnected() error {
+	if c.db != nil {
+		return nil
+	}
+	if c.connStr == "" {
+		return fmt.Errorf("PostgreSQL not configured: set POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DATABASE, POSTGRES_USER")
+	}
+	db, err := sql.Open("postgres", c.connStr)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(5 * time.Minute)
-
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		db.Close()
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-
-	settings := parseSQLFunctionSettings()
-
-	return &PostgresClient{connStr: connStr, db: db, settings: settings}, nil
+	c.db = db
+	return nil
 }
 
 // Close closes the database connection.
@@ -140,6 +153,9 @@ func (c *PostgresClient) Close() error {
 
 // ExecuteSQL executes a raw SQL query and returns results as a formatted string.
 func (c *PostgresClient) ExecuteSQL(ctx context.Context, query string, limit int) (string, error) {
+	if err := c.ensureConnected(); err != nil {
+		return "", err
+	}
 	// Check permissions based on settings
 	upperQuery := strings.ToUpper(strings.TrimSpace(query))
 
@@ -233,6 +249,9 @@ func (c *PostgresClient) ExecuteSQL(ctx context.Context, query string, limit int
 
 // ListTables returns all tables in the current database.
 func (c *PostgresClient) ListTables(ctx context.Context) (string, error) {
+	if err := c.ensureConnected(); err != nil {
+		return "", err
+	}
 	query := `
 		SELECT schemaname, tablename 
 		FROM pg_catalog.pg_tables 
@@ -264,6 +283,9 @@ func (c *PostgresClient) ListTables(ctx context.Context) (string, error) {
 
 // DescribeTable returns column info for a table.
 func (c *PostgresClient) DescribeTable(ctx context.Context, schema, table string) (string, error) {
+	if err := c.ensureConnected(); err != nil {
+		return "", err
+	}
 	query := `
 		SELECT column_name, data_type, is_nullable, column_default
 		FROM information_schema.columns

@@ -37,7 +37,8 @@ type DescribeTableArgs struct {
 func RunMCPServer() {
 	pgClient, err := NewPostgresClient()
 	if err != nil {
-		log.Fatalf("Failed to create PostgreSQL client: %v", err)
+		log.Printf("Warning: Postgres client init failed (tools will return errors): %v", err)
+		pgClient = &PostgresClient{settings: DefaultSQLFunctionSettings()}
 	}
 	defer pgClient.Close()
 
