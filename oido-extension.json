@@ -2,7 +2,8 @@
   "name": "oido-postgres",
   "version": "1.0.0",
   "description": "Execute SQL queries, list tables, and describe PostgreSQL database schemas via MCP server.",
-  "mcpSerers": {
+	"runtime": "make build",
+  "mcpServers": {
     "oido-postgres": {
       "command": "${extensionPath}/oido-postgres-mcp",
       "args": [],
@@ -54,7 +55,8 @@
       "name": "POSTGRES_PASSWORD",
       "description": "PostgreSQL password",
       "defaultValue": "",
-      "type": "string"
+      "type": "string",
+      "sensitive": true
     },
     {
       "name": "POSTGRES_ALLOW_SELECT",
