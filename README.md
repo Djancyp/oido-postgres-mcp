@@ -4,9 +4,9 @@ This is a **PostgreSQL extension plugin** for Oido Studio. It provides tools for
 
 ## Features
 
-- **`execute_sql`** — Execute SELECT queries against PostgreSQL with safety blocking of destructive operations
-- **`list_tables`** — List all tables in the current database
-- **`describe_table`** — Show column names, types, and constraints for a table
+- **`oido-postgres_execute_sql`** — Execute SELECT queries against PostgreSQL with safety blocking of destructive operations
+- **`oido-postgres_list_tables`** — List all tables in the current database
+- **`oido-postgres_describe_table`** — Show column names, types, and constraints for a table
 
 ## Building
 

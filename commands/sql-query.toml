@@ -2,7 +2,7 @@ name = "sql-query"
 description = "Execute a SQL SELECT query against the PostgreSQL database."
 
 prompt = """
-Execute the following SQL query against the PostgreSQL database using the execute_sql tool:
+Execute the following SQL query against the PostgreSQL database using the oido-postgres_execute_sql tool:
 
 {{query}}
 

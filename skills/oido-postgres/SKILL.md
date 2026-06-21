@@ -11,7 +11,7 @@ The Oido PostgreSQL extension provides tools to query and explore PostgreSQL dat
 
 ## Available Tools
 
-### `execute_sql`
+### `oido-postgres_execute_sql`
 
 Execute a SQL query against the PostgreSQL database.
 
@@ -28,10 +28,10 @@ Execute a SQL query against the PostgreSQL database.
 **Example Usage:**
 ```
 User: "Show me all active users"
-→ Call execute_sql with query: "SELECT * FROM public.users WHERE status = 'active'"
+→ Call oido-postgres_execute_sql with query: "SELECT * FROM public.users WHERE status = 'active'"
 
 User: "How many orders were placed last month?"
-→ Call execute_sql with query: "SELECT COUNT(*) FROM public.orders WHERE created_at >= ..."
+→ Call oido-postgres_execute_sql with query: "SELECT COUNT(*) FROM public.orders WHERE created_at >= ..."
 ```
 
 **Response Format:**
@@ -40,7 +40,7 @@ Returns formatted table results with:
 - Row data
 - Total row count
 
-### `list_tables`
+### `oido-postgres_list_tables`
 
 List all tables in the PostgreSQL database.
 
@@ -54,13 +54,13 @@ List all tables in the PostgreSQL database.
 **Example Usage:**
 ```
 User: "What tables do we have?"
-→ Call list_tables
+→ Call oido-postgres_list_tables
 ```
 
 **Response Format:**
 Returns list of schema.table names.
 
-### `describe_table`
+### `oido-postgres_describe_table`
 
 Describe a table's columns, types, and constraints.
 
@@ -76,7 +76,7 @@ Describe a table's columns, types, and constraints.
 **Example Usage:**
 ```
 User: "What columns are in the users table?"
-→ Call describe_table with schema: "public", table: "users"
+→ Call oido-postgres_describe_table with schema: "public", table: "users"
 ```
 
 **Response Format:**
@@ -103,7 +103,7 @@ Returns column details:
 User: "What tables are in the database?"
 
 Assistant: Let me check your PostgreSQL database structure.
-[Calls list_tables]
+[Calls oido-postgres_list_tables]
 
 Tables (5):
 
@@ -122,7 +122,7 @@ Would you like me to describe any of these tables?
 User: "Tell me about the users table"
 
 Assistant: Let me get the structure of the users table.
-[Calls describe_table with schema: "public", table: "users"]
+[Calls oido-postgres_describe_table with schema: "public", table: "users"]
 
 Table: public.users
 
@@ -141,7 +141,7 @@ status               | character varying    | YES      | active
 User: "Show me the first 5 orders"
 
 Assistant: I'll fetch the first 5 orders for you.
-[Calls execute_sql with query: "SELECT * FROM public.orders", limit: 5]
+[Calls oido-postgres_execute_sql with query: "SELECT * FROM public.orders", limit: 5]
 
 Query returned 6 columns
 

@@ -4,7 +4,7 @@ Execute SQL queries, list tables, and describe PostgreSQL database schemas. This
 
 ## Available Tools
 
-### `execute_sql`
+### `oido-postgres_execute_sql`
 Execute a SQL query against the PostgreSQL database.
 
 **Parameters:**
@@ -13,14 +13,14 @@ Execute a SQL query against the PostgreSQL database.
 
 **Returns:** Formatted table results with column headers and row counts.
 
-### `list_tables`
+### `oido-postgres_list_tables`
 List all tables in the PostgreSQL database.
 
 **Parameters:** None
 
 **Returns:** List of schema.table names.
 
-### `describe_table`
+### `oido-postgres_describe_table`
 Describe a table's columns, types, and constraints.
 
 **Parameters:**
@@ -36,7 +36,7 @@ User: What tables are in the database?
 
 Assistant: I'll list all tables in your PostgreSQL database.
 
-[Uses list_tables tool]
+[Uses oido-postgres_list_tables tool]
 
 Tables (5):
 
@@ -51,7 +51,7 @@ User: Show me the first 10 users
 
 Assistant: I'll query the users table for you.
 
-[Uses execute_sql tool with query: "SELECT * FROM public.users", limit: 10]
+[Uses oido-postgres_execute_sql tool with query: "SELECT * FROM public.users", limit: 10]
 
 Query returned 5 columns
 

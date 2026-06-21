@@ -52,19 +52,19 @@ func RunMCPServer() {
 
 	// Register execute_sql tool
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "execute_sql",
+		Name:        "oido-postgres_execute_sql",
 		Description: "Execute a SQL query against the PostgreSQL database. Only SELECT queries are allowed for safety. Returns formatted results with column headers.",
 	}, handler.HandleExecuteSQL)
 
 	// Register list_tables tool
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "list_tables",
+		Name:        "oido-postgres_list_tables",
 		Description: "List all tables in the PostgreSQL database. Returns schema.table names.",
 	}, handler.HandleListTables)
 
 	// Register describe_table tool
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "describe_table",
+		Name:        "oido-postgres_describe_table",
 		Description: "Describe a table's columns, types, and constraints. Requires schema and table name.",
 	}, handler.HandleDescribeTable)
 

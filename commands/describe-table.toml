@@ -2,7 +2,7 @@ name = "describe-table"
 description = "Describe a table's columns, types, and constraints."
 
 prompt = """
-Describe the structure of table {{table}} in schema {{schema}} using the describe_table tool.
+Describe the structure of table {{table}} in schema {{schema}} using the oido-postgres_describe_table tool.
 Show column names, data types, nullable status, and default values.
 """
 
