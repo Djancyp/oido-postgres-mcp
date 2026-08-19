@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -151,54 +152,125 @@ func (c *PostgresClient) Close() error {
 	return nil
 }
 
-// ExecuteSQL executes a raw SQL query and returns results as a formatted string.
+// writesEnabled reports whether any write operation is permitted. When nothing
+// is, every statement can run inside a READ ONLY transaction and the database
+// enforces it for us.
+func (s *SQLFunctionSettings) writesEnabled() bool {
+	return s.AllowInsert || s.AllowUpdate || s.AllowDelete ||
+		s.AllowCreate || s.AllowAlter || s.AllowDrop || s.AllowTruncate
+}
+
+// limitClause matches a row cap already present at the end of the query, so a
+// LIMIT inside a subquery does not stop us capping the outer result.
+var limitClause = regexp.MustCompile(`(?is)\bLIMIT\s+\d+\s*(OFFSET\s+\d+\s*)?$`)
+
+// prepareQuery trims the statement and appends a row cap to an uncapped SELECT.
+// The trailing semicolon has to go first: a model emits "SELECT 1;" by default,
+// and pasting " LIMIT 100" after it is a syntax error.
+func prepareQuery(query string, limit int, s *SQLFunctionSettings) string {
+	q := strings.TrimRight(strings.TrimSpace(query), "; \t\n\r")
+	if !s.AllowSelect || !strings.HasPrefix(strings.ToUpper(q), "SELECT") {
+		return q
+	}
+	if limitClause.MatchString(q) {
+		return q
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	return fmt.Sprintf("%s LIMIT %d", q, limit)
+}
+
+// checkAdvisory rejects a disallowed operation early so the caller gets a
+// message naming the setting to flip.
+//
+// It is NOT the security boundary and must never be treated as one: it matches
+// the statement's leading keyword, so "WITH gone AS (DELETE ...) SELECT" matches
+// nothing here and sails through. Enforcement is the READ ONLY transaction in
+// ExecuteSQL, which the server applies to CTEs and every other shape alike.
+func (s *SQLFunctionSettings) checkAdvisory(query string) error {
+	upper := strings.ToUpper(strings.TrimSpace(query))
+	operations := []struct {
+		prefix  string
+		allowed bool
+	}{
+		{"SELECT", s.AllowSelect},
+		{"INSERT", s.AllowInsert},
+		{"UPDATE", s.AllowUpdate},
+		{"DELETE", s.AllowDelete},
+		{"CREATE", s.AllowCreate},
+		{"ALTER", s.AllowAlter},
+		{"DROP", s.AllowDrop},
+		{"TRUNCATE", s.AllowTruncate},
+	}
+	for _, op := range operations {
+		if strings.HasPrefix(upper, op.prefix) && !op.allowed {
+			return fmt.Errorf("blocked: %s operations are not allowed (enable with POSTGRES_ALLOW_%s=true)",
+				op.prefix, op.prefix)
+		}
+	}
+	return nil
+}
+
+// ExecuteSQL executes a single SQL statement and returns results as a formatted
+// string.
+//
+// Two server-side properties do the enforcing, because inspecting the query
+// string cannot:
+//
+//   - PrepareContext puts the statement on the extended query protocol, which
+//     carries exactly one command. "SELECT 1 LIMIT 1; DROP TABLE t" is rejected
+//     by postgres instead of being waved through on its SELECT prefix. lib/pq
+//     sends argument-less queries over the simple protocol otherwise, and that
+//     one accepts a whole batch.
+//   - With no write operation enabled, the statement runs in a READ ONLY
+//     transaction. Postgres then refuses every write regardless of how it is
+//     spelled, including inside a CTE.
+//
+// Per-verb permissions (INSERT yes, DROP no) cannot be expressed this way. Once
+// any write is enabled only checkAdvisory stands between the model and the other
+// write verbs, so grant those permissions with a database role scoped to what
+// this connection should reach.
 func (c *PostgresClient) ExecuteSQL(ctx context.Context, query string, limit int) (string, error) {
 	if err := c.ensureConnected(); err != nil {
 		return "", err
 	}
-	// Check permissions based on settings
-	upperQuery := strings.ToUpper(strings.TrimSpace(query))
 
-	type sqlOperation struct {
-		prefix  string
-		allowed bool
+	query = prepareQuery(query, limit, c.settings)
+	if err := c.settings.checkAdvisory(query); err != nil {
+		return "", err
 	}
 
-	operations := []sqlOperation{
-		{"SELECT", c.settings.AllowSelect},
-		{"INSERT", c.settings.AllowInsert},
-		{"UPDATE", c.settings.AllowUpdate},
-		{"DELETE", c.settings.AllowDelete},
-		{"CREATE", c.settings.AllowCreate},
-		{"ALTER", c.settings.AllowAlter},
-		{"DROP", c.settings.AllowDrop},
-		{"TRUNCATE", c.settings.AllowTruncate},
+	tx, err := c.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: !c.settings.writesEnabled()})
+	if err != nil {
+		return "", fmt.Errorf("failed to begin transaction: %w", err)
 	}
+	defer tx.Rollback() //nolint:errcheck // no-op once Commit has run
 
-	for _, op := range operations {
-		if strings.HasPrefix(upperQuery, op.prefix) {
-			if !op.allowed {
-				return "", fmt.Errorf("blocked: %s operations are not allowed (enable with POSTGRES_ALLOW_%s=true)",
-					strings.TrimSpace(op.prefix), strings.TrimSpace(op.prefix))
-			}
-			break
-		}
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return "", fmt.Errorf("query rejected: %w", err)
 	}
+	defer stmt.Close()
 
-	// Append LIMIT if SELECT and not already present
-	if strings.HasPrefix(upperQuery, "SELECT") && c.settings.AllowSelect && !strings.Contains(upperQuery, "LIMIT") {
-		if limit <= 0 {
-			limit = 100
-		}
-		query = fmt.Sprintf("%s LIMIT %d", query, limit)
-	}
-
-	rows, err := c.db.QueryContext(ctx, query)
+	rows, err := stmt.QueryContext(ctx)
 	if err != nil {
 		return "", fmt.Errorf("query execution failed: %w", err)
 	}
-	defer rows.Close()
 
+	out, err := formatRows(rows)
+	rows.Close()
+	if err != nil {
+		return out, err
+	}
+	if err := tx.Commit(); err != nil {
+		return "", fmt.Errorf("failed to commit: %w", err)
+	}
+	return out, nil
+}
+
+// formatRows renders a result set as a text table.
+func formatRows(rows *sql.Rows) (string, error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return "", fmt.Errorf("failed to get columns: %w", err)
@@ -244,7 +316,7 @@ func (c *PostgresClient) ExecuteSQL(ctx context.Context, query string, limit int
 	}
 
 	result.WriteString(fmt.Sprintf("\nTotal rows: %d", rowCount))
-	return result.String(), nil
+	return result.String(), rows.Err()
 }
 
 // ListTables returns all tables in the current database.
